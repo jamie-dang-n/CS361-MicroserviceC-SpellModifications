@@ -16,7 +16,7 @@ input_dict = {
 }
 
 option = 0: quit the microservice
-option = 1: Customize a Spell -> Generate a JSON from given dictionary "new_fields"
+option = 1: Create a Spell -> Generate a JSON from given dictionary "new_fields"
 option = 2: Edit an existing Spell -> Change JSON fields in json_object to those of given dictionary "new_fields"
 
 """
@@ -33,9 +33,19 @@ def convertInt(dict, field):
     return returnInt
 
 # Customize a Spell -> Generate a JSON from given input
+def createNewSpell(bookmarks, spellFields):
+    print("FIXME: create a new spell")
 
 # Edit an existing Spell -> Change JSON fields from given input
-
+def editSpell(bookmarks, spellFields, spell):
+    for entry in bookmarks:
+        if (entry.get('index') == spell.get('index')):
+            spellToEdit = entry
+            break
+    for key, newValue in spellFields.items():
+        if key in spellToEdit:
+            spellToEdit[key] = newValue
+    return bookmarks
 
 def main():
     # set up ZeroMQ
@@ -46,6 +56,7 @@ def main():
     socket.bind("tcp://localhost:5554")
     proceed = 1 # continue waiting for next request while option != 0
     while (proceed != 0):
+        returnBookmarks = []
         print("Spell Modifications Service Listening...")
         request = socket.recv()
         print(f"Received request: {request}")
@@ -57,16 +68,18 @@ def main():
         # check if option is 0-- if it is, quit the service
         proceed = convertInt(decoded, "option")
         if (proceed != 0):
-            returnArray = []
             option = decoded['option']
             # do the appropriate operation
-            socket.send(b"a message")
-            
-            # convert returnArray to byte string
-            # jsonReturnString = json.dumps(returnArray)
-            # returnByteString = jsonReturnString.encode('utf-8')
-            # print(f"Response: {returnByteString}")
-            # socket.send(returnByteString)
+            if (option == 1):
+                returnBookmarks = createNewSpell(decoded['json_array'], decoded['new_fields'])
+            elif (option == 2):
+                returnBookmarks = editSpell(decoded['json_array'], decoded['new_fields'], decoded['json_object'])
+
+            # convert returnBookmarks to byte string
+            jsonReturnString = json.dumps(returnBookmarks)
+            returnByteString = jsonReturnString.encode('utf-8')
+            print(f"Response: {returnByteString}")
+            socket.send(returnByteString)
         else:
             print("Bookmark Modifications Microservice has ended.")
             socket.send_string("") # send back empty string
